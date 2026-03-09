@@ -10,4 +10,5 @@ urlpatterns = [
     path('update/', views.daily_update_view, name='daily_update'),
     path('add-partner/', views.add_partner, name='add_partner'),
     path('connect-partner/<int:user_id>/', views.connect_partner, name='connect_partner'),
+    path('complete-goal/<int:goal_id>/', views.complete_goal, name='complete_goal'),
 ]

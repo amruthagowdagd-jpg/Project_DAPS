@@ -20,24 +20,39 @@ def register(request):
 
 @login_required
 def dashboard(request):
-    goals = Goal.objects.filter(user=request.user)
+    # Fetch partnership
+    partnership = Partnership.objects.filter(Q(user1=request.user) | Q(user2=request.user)).first()
+    
+    partner = None
+    partner_updates = []
+    partner_missing_update = False
+    
+    if partnership:
+        partner = partnership.user2 if partnership.user1 == request.user else partnership.user1
+        partner_updates = DailyUpdate.objects.filter(user=partner).order_by('-date')[:5]
+        
+        # Check if partner has updated today
+        from django.utils import timezone
+        today = timezone.now().date()
+        partner_has_updated = DailyUpdate.objects.filter(user=partner, date=today).exists()
+        partner_missing_update = not partner_has_updated
+
+    # Fetch individual goals AND shared goals
+    if partnership:
+        goals = Goal.objects.filter(Q(user=request.user) | Q(partnership=partnership)).distinct()
+    else:
+        goals = Goal.objects.filter(user=request.user)
+
     daily_updates = DailyUpdate.objects.filter(user=request.user).order_by('-date')
     
-    # Simple logic to find partner
-    partnerships = Partnership.objects.filter(Q(user1=request.user) | Q(user2=request.user))
-    partner = None
-    if partnerships.exists():
-        p = partnerships.first()
-        partner = p.user2 if p.user1 == request.user else p.user1
-        partner_updates = DailyUpdate.objects.filter(user=partner).order_by('-date')[:5]
-    else:
-        partner_updates = []
-
     if request.method == 'POST':
         goal_form = GoalForm(request.POST)
         if goal_form.is_valid():
             goal = goal_form.save(commit=False)
             goal.user = request.user
+            # Check if it's a shared goal (from checkbox or hidden input)
+            if (goal_form.cleaned_data.get('is_shared') or request.POST.get('is_shared')) and partnership:
+                goal.partnership = partnership
             goal.save()
             return redirect('dashboard')
     else:
@@ -48,7 +63,9 @@ def dashboard(request):
         'daily_updates': daily_updates,
         'partner': partner,
         'partner_updates': partner_updates,
+        'partner_missing_update': partner_missing_update,
         'goal_form': goal_form,
+        'has_partnership': bool(partnership),
     })
 
 @login_required
@@ -107,4 +124,14 @@ def connect_partner(request, user_id):
         Q(user1=request.user, user2=partner) | Q(user1=partner, user2=request.user)
     ).exists():
         Partnership.objects.create(user1=request.user, user2=partner)
+    return redirect('dashboard')
+
+@login_required
+def complete_goal(request, goal_id):
+    goal = Goal.objects.get(id=goal_id)
+    # Check if user owns the goal or it's a shared goal for their partnership
+    partnership = Partnership.objects.filter(Q(user1=request.user) | Q(user2=request.user)).first()
+    if goal.user == request.user or (goal.partnership and goal.partnership == partnership):
+        goal.is_completed = not goal.is_completed
+        goal.save()
     return redirect('dashboard')

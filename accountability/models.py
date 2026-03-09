@@ -12,8 +12,10 @@ class UserProfile(models.Model):
 
 class Goal(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='goals')
+    partnership = models.ForeignKey('Partnership', on_delete=models.CASCADE, related_name='shared_goals', null=True, blank=True)
     title = models.CharField(max_length=255)
     description = models.TextField()
+    penalty = models.CharField(max_length=255, blank=True, help_text="What's the penalty if you fail?")
     is_completed = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     deadline = models.DateField(null=True, blank=True)

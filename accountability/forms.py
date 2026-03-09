@@ -2,9 +2,10 @@ from django import forms
 from .models import Goal, DailyUpdate
 
 class GoalForm(forms.ModelForm):
+    is_shared = forms.BooleanField(required=False, label="Share with Partner")
     class Meta:
         model = Goal
-        fields = ['title', 'description', 'deadline']
+        fields = ['title', 'description', 'deadline', 'penalty', 'is_shared']
         widgets = {
             'deadline': forms.DateInput(attrs={'type': 'date'}),
         }

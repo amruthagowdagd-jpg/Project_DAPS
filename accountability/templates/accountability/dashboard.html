@@ -11,9 +11,27 @@
             <ul style="list-style: none; padding: 0;">
                 {% for goal in goals %}
                 <li
-                    style="padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between;">
-                    <span>{{ goal.title }}</span>
-                    <span style="opacity: 0.6;">{{ goal.deadline|default:"No deadline" }}</span>
+                    style="padding: 1rem; border-bottom: 1px solid var(--glass-border); display: flex; justify-content: space-between; align-items: center; border-left: 4px solid {% if goal.partnership %}var(--secondary){% else %}var(--primary){% endif %};">
+                    <div>
+                        <div style="font-weight: bold;">{{ goal.title }}</div>
+                        {% if goal.penalty %}
+                        <div style="font-size: 0.75rem; color: #ef4444; font-weight: bold; margin-top: 0.2rem;">Penalty:
+                            {{ goal.penalty }}</div>
+                        {% endif %}
+                        {% if goal.partnership %}
+                        <span style="font-size: 0.7rem; color: var(--secondary); text-transform: uppercase;">Shared
+                            Goal</span>
+                        {% endif %}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <span style="opacity: 0.6; font-size: 0.8rem;">{{ goal.deadline|default:"No deadline" }}</span>
+                        <a href="{% url 'complete_goal' goal.id %}" style="text-decoration: none;">
+                            <div
+                                style="width: 24px; height: 24px; border: 2px solid {% if goal.is_completed %}var(--primary){% else %}rgba(255,255,255,0.2){% endif %}; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: {% if goal.is_completed %}var(--primary){% else %}transparent{% endif %}; color: white; cursor: pointer;">
+                                {% if goal.is_completed %}✓{% endif %}
+                            </div>
+                        </a>
+                    </div>
                 </li>
                 {% empty %}
                 <li>No goals yet. Add one below!</li>
@@ -23,8 +41,23 @@
             <h4 style="margin-top: 2rem;">Add New Goal</h4>
             <form method="post">
                 {% csrf_token %}
-                {{ goal_form.as_p }}
-                <button type="submit" class="btn-premium">Add Goal</button>
+                <label>Goal Title</label>
+                {{ goal_form.title }}
+                <label>Description</label>
+                {{ goal_form.description }}
+                <label>Penalty (if you fail)</label>
+                {{ goal_form.penalty }}
+                <label>Deadline</label>
+                {{ goal_form.deadline }}
+
+                {% if has_partnership %}
+                <div style="margin: 1rem 0; display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem;">
+                    {{ goal_form.is_shared }}
+                    <label style="margin: 0; cursor: pointer;" for="id_is_shared">Share with Partner</label>
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn-premium" style="width: 100%; margin-top: 1rem;">Add Goal</button>
             </form>
         </div>
 
@@ -53,6 +86,23 @@
                     {{ partner.username|slice:":1"|upper }}
                 </div>
                 <h4>{{ partner.username }}</h4>
+                {% if partner_missing_update %}
+                <div
+                    style="background: rgba(239, 68, 68, 0.15); color: #ef4444; padding: 0.5rem; border-radius: 8px; font-size: 0.8rem; font-weight: bold; margin-bottom: 1rem;">
+                    ⚠️ Hasn't updated today!
+                </div>
+                {% else %}
+                <div
+                    style="background: rgba(34, 197, 94, 0.15); color: #22c55e; padding: 0.5rem; border-radius: 8px; font-size: 0.8rem; font-weight: bold; margin-bottom: 1rem;">
+                    ✅ Updated for today!
+                </div>
+                {% endif %}
+
+                <button type="button" class="btn-premium"
+                    onclick="document.getElementById('id_is_shared').checked = true; document.getElementById('id_title').focus();"
+                    style="width: 100%; font-size: 0.8rem; background: var(--secondary);">
+                    Set Goal for Both 🤝
+                </button>
             </div>
 
             <h4>Recent Partner Activity</h4>
