@@ -3,8 +3,9 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
 from django.db.models import Q
 from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
 from .models import Goal, DailyUpdate, Partnership, UserProfile
-from .forms import GoalForm, DailyUpdateForm
+from .forms import GoalForm, DailyUpdateForm, PartnerConnectionForm
 
 def register(request):
     if request.method == 'POST':
@@ -64,17 +65,39 @@ def daily_update_view(request):
     return render(request, 'accountability/daily_update.html', {'form': form})
 
 @login_required
-def find_partner(request):
-    # Find users who are NOT the current user AND don't have an active partnership
-    # This is a simplified version: just show all other users for now
-    existing_partnerships = Partnership.objects.filter(Q(user1=request.user) | Q(user2=request.user))
-    if existing_partnerships.exists():
+def add_partner(request):
+    # If user already has a partner, redirect to dashboard
+    if Partnership.objects.filter(Q(user1=request.user) | Q(user2=request.user)).exists():
         return redirect('dashboard')
         
-    users = User.objects.exclude(id=request.user.id).exclude(
-        Q(partnerships_as_user1__is_active=True) | Q(partnerships_as_user2__is_active=True)
-    )
-    return render(request, 'accountability/find_partner.html', {'users': users})
+    error_message = None
+    if request.method == 'POST':
+        form = PartnerConnectionForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            
+            # Authenticate the potential partner
+            partner = authenticate(request, username=username, password=password)
+            
+            if partner:
+                if partner == request.user:
+                    error_message = "You cannot be your own partner!"
+                elif Partnership.objects.filter(Q(user1=partner) | Q(user2=partner)).exists():
+                    error_message = "That user already has a partner."
+                else:
+                    # Create the partnership
+                    Partnership.objects.create(user1=request.user, user2=partner)
+                    return redirect('dashboard')
+            else:
+                error_message = "Invalid username or password for the partner."
+    else:
+        form = PartnerConnectionForm()
+        
+    return render(request, 'accountability/add_partner.html', {
+        'form': form,
+        'error_message': error_message
+    })
 
 @login_required
 def connect_partner(request, user_id):

@@ -8,6 +8,6 @@ urlpatterns = [
     path('login/', auth_views.LoginView.as_view(template_name='accountability/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='login'), name='logout'),
     path('update/', views.daily_update_view, name='daily_update'),
-    path('find-partner/', views.find_partner, name='find_partner'),
+    path('add-partner/', views.add_partner, name='add_partner'),
     path('connect-partner/<int:user_id>/', views.connect_partner, name='connect_partner'),
 ]

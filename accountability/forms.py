@@ -13,3 +13,7 @@ class DailyUpdateForm(forms.ModelForm):
     class Meta:
         model = DailyUpdate
         fields = ['achievements', 'bottlenecks', 'plan_for_tomorrow', 'mood_rating']
+
+class PartnerConnectionForm(forms.Form):
+    username = forms.CharField(max_length=150)
+    password = forms.CharField(widget=forms.PasswordInput)
